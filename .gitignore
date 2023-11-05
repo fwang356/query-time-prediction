@@ -1,0 +1,4 @@
+credentials.py
+evadb_data/
+evadb-venv/
+__pycache__/
