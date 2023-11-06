@@ -27,7 +27,7 @@ cursor.query("""
   TYPE XGBoost
   PREDICT 'duration'
   TASK 'regression'
-  TIME_LIMIT 60;
+  TIME_LIMIT 3600;
 """ %query).df()
 
 predictions = cursor.query("""

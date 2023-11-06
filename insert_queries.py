@@ -4,10 +4,10 @@ from credentials import user, password
 from gpt4all import Embed4All
 from psycopg2.extras import execute_values
 
-def create_table(conn, cursor):
+def create_table(conn, cursor, num_embeddings):
     query = ""
 
-    for i in range(1, 385):
+    for i in range(1, num_embeddings + 1):
         query = query + ", embeddings" + str(i) + " float"
 
     command = """
@@ -23,8 +23,7 @@ def create_table(conn, cursor):
     conn.commit()
     
 
-# Parse benchmark csv created by pgbench and inserts query statement, plan, and execution time to the queries csv.
-def insert_queries():
+def generate_tuples():
     embedder = Embed4All()
     with open ("benchmark.csv", mode="r") as file:
         csvFile = csv.DictReader(file)
@@ -49,7 +48,8 @@ def insert_queries():
                 cursor.execute("explain " + queries[i])
                 plan = cursor.fetchall()
                 plan = ','.join([s[0] for s in plan])
-                data = tuple([id, queries[i], plan, durations[i]] + embedder.embed(plan))
+                embeddings = embedder.embed(plan) + embedder.embed(queries[i])
+                data = tuple([id, queries[i], plan, durations[i]] + embeddings)
                 id += 1
 
                 tuples.append(data)
@@ -59,9 +59,13 @@ def insert_queries():
                 conn.rollback()
                 continue
     
+    return tuples, len(embeddings)
+
+# Parse benchmark csv created by pgbench and inserts query statement, plan, and execution time to the queries csv.
+def insert_queries(tuples, num_embeddings):
     try:
         query = ""
-        for i in range(1, 385):
+        for i in range(1, num_embeddings + 1):
             query += ", embeddings" + str(i)
         execute_values(cursor, "INSERT INTO queries (id, query, plan, duration" + query + ") VALUES %s", tuples)
         conn.commit()
@@ -73,6 +77,8 @@ if __name__ == "__main__":
     conn = psycopg2.connect(database="benchmark", user=user, password=password, host='127.0.0.1', port='5432')
     conn.autocommit = True
     cursor = conn.cursor()
+    
+    tuples, num_embeddings = generate_tuples()
 
-    create_table(conn, cursor)
-    insert_queries()
+    create_table(conn, cursor, num_embeddings)
+    insert_queries(tuples, num_embeddings)
