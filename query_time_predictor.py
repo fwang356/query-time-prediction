@@ -18,7 +18,7 @@ params = {
 
 query = "embeddings1"
 
-for i in range(2, 385):
+for i in range(2, 6):
   query = query + ", embeddings" + str(i)
 
 cursor.query("""
@@ -27,7 +27,7 @@ cursor.query("""
   TYPE XGBoost
   PREDICT 'duration'
   TASK 'regression'
-  TIME_LIMIT 3600;
+  TIME_LIMIT 300;
 """ %query).df()
 
 predictions = cursor.query("""
